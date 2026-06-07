@@ -2,3 +2,5 @@
 .env
 __pycache__/
 storage/exports/
+docs/aws_plan.md
+docs/private/
