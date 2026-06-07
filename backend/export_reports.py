@@ -1,7 +1,10 @@
+import os
 from datetime import datetime
 from pathlib import Path
 
+import boto3
 import pandas as pd
+from dotenv import load_dotenv
 
 from database import get_connection
 
@@ -9,8 +12,25 @@ from database import get_connection
 BASE_DIR = Path(__file__).resolve().parents[1]
 EXPORT_DIR = BASE_DIR / "storage" / "exports"
 
+load_dotenv(BASE_DIR / ".env")
 
-def exportar_leituras_csv():
+
+def enviar_para_s3(caminho_arquivo):
+    bucket = os.getenv("S3_BUCKET")
+    region = os.getenv("AWS_REGION", "us-east-1")
+
+    if not bucket:
+        return None
+
+    chave_s3 = f"relatorios/{caminho_arquivo.name}"
+
+    s3 = boto3.client("s3", region_name=region)
+    s3.upload_file(str(caminho_arquivo), bucket, chave_s3)
+
+    return chave_s3
+
+
+def exportar_leituras_csv(enviar_s3=False):
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
 
     query = """
@@ -42,10 +62,21 @@ def exportar_leituras_csv():
 
     df.to_csv(caminho_arquivo, index=False, encoding="utf-8-sig")
 
-    return caminho_arquivo, len(df)
+    chave_s3 = None
+
+    if enviar_s3:
+        chave_s3 = enviar_para_s3(caminho_arquivo)
+
+    return caminho_arquivo, len(df), chave_s3
 
 
 if __name__ == "__main__":
-    caminho, total = exportar_leituras_csv()
+    caminho, total, chave_s3 = exportar_leituras_csv(enviar_s3=True)
+
     print(f"Relatorio gerado com sucesso: {caminho}")
     print(f"Total de leituras exportadas: {total}")
+
+    if chave_s3:
+        print(f"Relatorio enviado ao S3: {chave_s3}")
+    else:
+        print("Relatorio gerado apenas localmente.")

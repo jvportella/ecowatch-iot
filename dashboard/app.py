@@ -20,10 +20,15 @@ st.write("Dashboard local com dados recebidos via MQTT e salvos no PostgreSQL.")
 
 st.sidebar.subheader("Relatorios")
 
-if st.sidebar.button("Gerar relatorio CSV"):
-    caminho_arquivo, total = exportar_leituras_csv()
+if st.sidebar.button("Gerar relatorio CSV e enviar ao S3"):
+    caminho_arquivo, total, chave_s3 = exportar_leituras_csv(enviar_s3=True)
 
     st.sidebar.success(f"Relatorio gerado com {total} leituras.")
+
+    if chave_s3:
+        st.sidebar.info(f"Enviado ao S3: {chave_s3}")
+    else:
+        st.sidebar.warning("Relatorio gerado apenas localmente. Bucket S3 nao configurado.")
 
     csv_bytes = Path(caminho_arquivo).read_bytes()
 
