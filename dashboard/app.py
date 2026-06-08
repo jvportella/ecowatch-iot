@@ -11,7 +11,7 @@ BACKEND_DIR = BASE_DIR / "backend"
 sys.path.insert(0, str(BACKEND_DIR))
 
 from database import get_connection
-from export_reports import exportar_leituras_csv
+from export_reports import exportar_leituras_csv, exportar_relatorio_mensal_pdf
 
 
 st.set_page_config(
@@ -96,6 +96,33 @@ if st.session_state["csv_bytes"] is not None:
         key="botao_baixar_csv"
     )
 
+if "pdf_bytes" not in st.session_state:
+    st.session_state["pdf_bytes"] = None
+    st.session_state["pdf_filename"] = None
+    st.session_state["pdf_s3_key"] = None
+
+if st.sidebar.button("Gerar relatorio mensal PDF e enviar ao S3", key="botao_gerar_pdf"):
+    caminho_pdf, total_pdf, chave_pdf = exportar_relatorio_mensal_pdf(enviar_s3=True)
+
+    st.session_state["pdf_bytes"] = Path(caminho_pdf).read_bytes()
+    st.session_state["pdf_filename"] = Path(caminho_pdf).name
+    st.session_state["pdf_s3_key"] = chave_pdf
+
+    st.sidebar.success(f"PDF mensal gerado com {total_pdf} leituras.")
+
+    if chave_pdf:
+        st.sidebar.info(f"Enviado ao S3: {chave_pdf}")
+    else:
+        st.sidebar.warning("PDF gerado apenas localmente.")
+
+if st.session_state["pdf_bytes"] is not None:
+    st.sidebar.download_button(
+        label="Baixar relatorio mensal PDF",
+        data=st.session_state["pdf_bytes"],
+        file_name=st.session_state["pdf_filename"],
+        mime="application/pdf",
+        key="botao_baixar_pdf"
+    )
 
 # =========================
 # CONSULTAS
